@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>3D Manager</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar__brand">
+          <span>3D Manager</span>
+          <small>Panel principal</small>
+        </div>
+        <nav class="sidebar__nav">
+          <button class="nav-item is-active" data-page="printers">Impresoras</button>
+          <button class="nav-item" data-page="filaments">Filamentos</button>
+          <button class="nav-item" data-page="supplies">Insumos</button>
+          <button class="nav-item" data-page="orders">Pedidos</button>
+          <button class="nav-item" data-page="finance">Finanzas</button>
+          <button class="nav-item" data-page="budget">Presupuestos</button>
+        </nav>
+        <div class="sidebar__footer">
+          <span>Administra todo tu flujo</span>
+        </div>
+      </aside>
+
+      <main class="content">
+        <section class="page is-active" data-section="printers">
+          <div class="page__header">
+            <h2>Impresoras</h2>
+          </div>
+          <section class="card">
+        <form id="printer-form" class="form">
+          <input name="brand" placeholder="Marca" required />
+          <input name="model" placeholder="Modelo" required />
+          <input name="price" type="number" step="0.01" placeholder="Precio" />
+          <input name="purchase_date" type="date" placeholder="Fecha de compra" />
+          <button class="btn" type="submit">Agregar</button>
+        </form>
+        <div class="list-header">
+          <span>Marca / Modelo</span>
+          <span>Precio</span>
+          <span>Fecha compra</span>
+        </div>
+        <div class="list" id="printers"></div>
+          </section>
+        </section>
+
+        <section class="page" data-section="filaments">
+          <div class="page__header">
+            <h2>Filamentos</h2>
+          </div>
+          <section class="card">
+        <form id="filament-form" class="form">
+          <input name="name" placeholder="Nombre" required />
+          <input name="color" placeholder="Color" />
+          <input name="material" placeholder="Material" />
+          <input name="stock_grams" type="number" placeholder="Stock (g)" />
+          <input name="cost_per_kg" type="number" step="0.01" placeholder="Costo por kg" />
+          <input name="extruder_temp_c" type="number" placeholder="Temp. extrusor (C)" />
+          <input name="bed_temp_c" type="number" placeholder="Temp. cama (C)" />
+          <button class="btn" type="submit">Agregar</button>
+        </form>
+        <div class="list" id="filaments"></div>
+          </section>
+        </section>
+
+        <section class="page" data-section="supplies">
+          <div class="page__header">
+            <h2>Insumos</h2>
+          </div>
+          <section class="card">
+        <form id="supply-form" class="form">
+          <input name="name" placeholder="Nombre" required />
+          <input name="stock_qty" type="number" placeholder="Stock" />
+          <input name="unit_cost" type="number" step="0.01" placeholder="Costo unitario" />
+          <button class="btn" type="submit">Agregar</button>
+        </form>
+        <div class="list" id="supplies"></div>
+          </section>
+        </section>
+
+        <section class="page" data-section="orders">
+          <div class="page__header">
+            <h2>Pedidos</h2>
+          </div>
+          <section class="card">
+        <form id="order-form" class="form form--wide">
+          <input name="customer_name" placeholder="Nombre del cliente" required />
+          <input name="created_date" type="date" placeholder="Fecha de creacion" />
+          <input name="due_date" type="date" placeholder="Fecha de entrega" />
+          <input name="total_charge" type="number" step="0.01" placeholder="Cobro total" />
+          <div class="order-block">
+            <div class="order-block__head">
+              <h3>Modelos a imprimir</h3>
+              <button type="button" class="btn btn--ghost" id="add-model">Agregar modelo</button>
+            </div>
+            <div id="order-models" class="order-rows"></div>
+          </div>
+          <div class="order-block">
+            <div class="order-block__head">
+              <h3>Filamentos</h3>
+              <button type="button" class="btn btn--ghost" id="add-filament">Agregar filamento</button>
+            </div>
+            <div id="order-filaments" class="order-rows"></div>
+          </div>
+          <div class="order-block">
+            <div class="order-block__head">
+              <h3>Insumos</h3>
+              <button type="button" class="btn btn--ghost" id="add-supply">Agregar insumo</button>
+            </div>
+            <div id="order-supplies" class="order-rows"></div>
+          </div>
+          <button class="btn" type="submit">Crear pedido</button>
+        </form>
+        <div class="hint">El pedido descuenta stock automaticamente.</div>
+        <div class="list-header">
+          <span>Cliente</span>
+          <span>Fechas</span>
+          <span>Modelos</span>
+          <span>Total</span>
+          <span>Estado</span>
+        </div>
+        <div class="list" id="orders"></div>
+          </section>
+        </section>
+
+        <section class="page" data-section="finance">
+          <div class="page__header">
+            <h2>Finanzas</h2>
+          </div>
+          <section class="card">
+        <form id="financial-form" class="form">
+          <select name="type">
+            <option value="income">Ingreso</option>
+            <option value="expense">Egreso</option>
+          </select>
+          <input name="amount" type="number" step="0.01" placeholder="Monto" required />
+          <input name="description" placeholder="Descripcion" />
+          <button class="btn" type="submit">Registrar</button>
+        </form>
+        <div class="finance-summary" id="finance-summary">
+          <div>
+            <span>Total invertido</span>
+            <strong>$0.00</strong>
+          </div>
+          <div>
+            <span>Total recibido</span>
+            <strong>$0.00</strong>
+          </div>
+          <div>
+            <span>Ganancia</span>
+            <strong>$0.00</strong>
+          </div>
+        </div>
+        <div class="list" id="financials"></div>
+          </section>
+        </section>
+
+        <section class="page" data-section="budget">
+          <div class="page__header">
+            <h2>Calculadora de presupuesto</h2>
+          </div>
+          <section class="card">
+        <form id="budget-form" class="form form--wide">
+          <select name="filament_id" id="budget-filament" required>
+            <option value="">Filamento (seleccionar)</option>
+          </select>
+          <input name="model_grams" type="number" placeholder="Peso del modelo (g)" required />
+          <input name="print_hours" type="number" placeholder="Horas impresion" />
+          <input name="print_minutes" type="number" placeholder="Minutos impresion" />
+          <input name="post_hours" type="number" placeholder="Horas postprocesado" />
+          <input name="post_minutes" type="number" placeholder="Minutos postprocesado" />
+          <input name="labor_hour_cost" type="number" step="0.01" value="1500" />
+          <select name="markup_multiplier">
+            <option value="3">Margen 3x</option>
+            <option value="4">Margen 4x</option>
+            <option value="5">Margen 5x</option>
+          </select>
+          <button class="btn" type="submit">Calcular</button>
+        </form>
+        <div class="budget" id="budget-result"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
