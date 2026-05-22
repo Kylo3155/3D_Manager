@@ -12,7 +12,7 @@ Linux/macOS:
 bash scripts/run_dev.sh
 ```
 
-Windows (PowerShell):
+Windows (PowerShell): (No testeado)
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/run_dev.ps1
