@@ -56,7 +56,7 @@ const refresh = async () => {
   state.filaments = filaments;
   renderList(listEl('filaments'), filaments, (f) =>
     `<span>${f.name} <small>${f.color || ''}</small></span>`
-      + `<small>${formatInteger(f.stock_grams)} g | $${formatNumber(f.cost_per_kg || 0)}/kg</small>`
+      + `<small>${formatNumber(f.stock_grams)} g | $${formatNumber(f.cost_per_kg || 0)}/kg</small>`
       + `<small class="list-actions"><span>${f.extruder_temp_c ?? '-'}C / ${f.bed_temp_c ?? '-'}C</span><button class="btn btn--ghost" data-edit="filaments" data-id="${f.id}">Editar</button></small>`
   );
   updateFilamentOptions(filaments);
@@ -79,7 +79,13 @@ const refresh = async () => {
   const financials = await api('/financials');
   state.financials = financials;
   renderList(listEl('financials'), financials, (m) =>
-    `<span>${m.type === 'income' ? 'Ingreso' : 'Egreso'}: ${m.description || ''}</span><small class="list-actions"><span>$${formatNumber(m.amount || 0)}</span><button class="btn btn--ghost" data-edit="financials" data-id="${m.id}">Editar</button></small>`
+    `<span><span class="tag ${m.type === 'income' ? 'tag--income' : 'tag--expense'}">${m.type === 'income' ? 'Ingreso' : 'Egreso'}</span> ${m.description || ''}</span>
+     <small class="list-actions">
+       <span>$${formatNumber(m.amount || 0)}</span>
+       ${m.details?.length ? `<button class="btn btn--ghost" data-finance-details="${m.id}">Detalle</button>` : ''}
+       <button class="btn btn--ghost" data-edit="financials" data-id="${m.id}">Editar</button>
+     </small>
+     ${m.details?.length ? `<div class="finance-details" data-details="${m.id}">${m.details.map((item) => `<div>${item.name || '-'}: ${item.qty ?? ''}</div>`).join('')}</div>` : ''}`
   );
   updateFinanceSummary(financials);
 
@@ -271,10 +277,23 @@ const updateFilamentOptions = (filaments) => {
     });
     select.value = current;
   });
+
+  document.querySelectorAll('#order-filaments select[name="filament_id"]').forEach((select) => {
+    const current = select.value;
+    select.innerHTML = buildOptions(cachedFilaments, 'Filamento (seleccionar)', (f) =>
+      `${f.name}${f.color ? ` (${f.color})` : ''}`
+    );
+    select.value = current;
+  });
 };
 
 const updateSupplyOptions = (supplies) => {
   cachedSupplies = supplies;
+  document.querySelectorAll('#order-supplies select[name="supply_id"]').forEach((select) => {
+    const current = select.value;
+    select.innerHTML = buildOptions(cachedSupplies, 'Insumo (seleccionar)');
+    select.value = current;
+  });
 };
 
 const buildOptions = (items, placeholder, labeler) => {
@@ -297,7 +316,7 @@ const addFilamentRow = () => {
         `${f.name}${f.color ? ` (${f.color})` : ''}`
       )}
     </select>
-    <input name="filament_grams" type="number" placeholder="Gramos" />
+    <input name="filament_grams" type="number" step="0.01" placeholder="Gramos" />
     <button type="button" class="btn btn--ghost" data-remove>Quitar</button>
   `;
   container.appendChild(row);
@@ -307,15 +326,20 @@ const addSupplyRow = () => {
   const container = document.getElementById('order-supplies');
   if (!container) return;
   const row = document.createElement('div');
-    `<span><span class="tag ${m.type === 'income' ? 'tag--income' : 'tag--expense'}">${m.type === 'income' ? 'Ingreso' : 'Egreso'}</span>${m.description || ''}</span><small class="list-actions"><span>$${formatNumber(m.amount || 0)}</span><button class="btn btn--ghost" data-edit="financials" data-id="${m.id}">Editar</button></small>`
+  row.className = 'order-row';
   row.innerHTML = `
     <select name="supply_id">
-      ${buildOptions(cachedSupplies, 'Insumo (seleccionar)')}
+      ${cachedSupplies.length
+        ? buildOptions(cachedSupplies, 'Insumo (seleccionar)')
+        : '<option value="">No hay insumos cargados</option>'}
     </select>
     <input name="supply_qty" type="number" placeholder="Cantidad" />
     <button type="button" class="btn btn--ghost" data-remove>Quitar</button>
   `;
   container.appendChild(row);
+  if (cachedSupplies.length) {
+    updateSupplyOptions(cachedSupplies);
+  }
 };
 
 const addModelRow = () => {
@@ -325,6 +349,19 @@ const addModelRow = () => {
   row.className = 'order-row';
   row.innerHTML = `
     <input name="model_name" placeholder="Modelo / pieza" />
+    <button type="button" class="btn btn--ghost" data-remove>Quitar</button>
+  `;
+  container.appendChild(row);
+};
+
+const addFinanceDetailRow = () => {
+  const container = document.getElementById('finance-details');
+  if (!container) return;
+  const row = document.createElement('div');
+  row.className = 'order-row';
+  row.innerHTML = `
+    <input name="detail_name" placeholder="Item" />
+    <input name="detail_qty" type="number" placeholder="Cantidad" />
     <button type="button" class="btn btn--ghost" data-remove>Quitar</button>
   `;
   container.appendChild(row);
@@ -366,6 +403,19 @@ const setupOrderForm = () => {
   }
 };
 
+const setupFinanceForm = () => {
+  const addDetailBtn = document.getElementById('add-finance-detail');
+  const detailContainer = document.getElementById('finance-details');
+  if (addDetailBtn && detailContainer) {
+    addDetailBtn.addEventListener('click', addFinanceDetailRow);
+    detailContainer.addEventListener('click', (e) => {
+      if (e.target && e.target.hasAttribute('data-remove')) {
+        e.target.closest('.order-row')?.remove();
+      }
+    });
+  }
+};
+
 const formToJson = (form) => Object.fromEntries(new FormData(form));
 
 const handleSubmit = (id, endpoint, transform) => {
@@ -388,7 +438,22 @@ handleSubmit('printer-form', '/printers', (raw) => ({
 }));
 handleSubmit('filament-form', '/filaments');
 handleSubmit('supply-form', '/supplies');
-handleSubmit('financial-form', '/financials');
+handleSubmit('financial-form', '/financials', (raw) => {
+  const details = [];
+  document.querySelectorAll('#finance-details .order-row').forEach((row) => {
+    const name = row.querySelector('input[name="detail_name"]')?.value?.trim();
+    const qty = Number(row.querySelector('input[name="detail_qty"]')?.value || 0);
+    if (name) {
+      details.push({ name, qty });
+    }
+  });
+  return {
+    type: raw.type,
+    amount: Number(raw.amount || 0),
+    description: raw.description || null,
+    details,
+  };
+});
 
 handleSubmit('order-form', '/orders', () => {
   const details = { filaments: [], supplies: [] };
@@ -465,6 +530,17 @@ if (ordersList) {
   });
 }
 
+const financialsList = document.getElementById('financials');
+if (financialsList) {
+  financialsList.addEventListener('click', (e) => {
+    const target = e.target;
+    if (target instanceof HTMLElement && target.dataset.financeDetails) {
+      const details = financialsList.querySelector(`[data-details="${target.dataset.financeDetails}"]`);
+      if (details) details.classList.toggle('is-open');
+    }
+  });
+}
+
 const navItems = document.querySelectorAll('.nav-item');
 const pages = document.querySelectorAll('.page');
 
@@ -480,6 +556,7 @@ navItems.forEach((item) => {
 });
 
 setupOrderForm();
+setupFinanceForm();
 refresh();
 
 const financeRange = document.getElementById('finance-range');
@@ -633,6 +710,7 @@ const setupEditHandlers = () => {
     if (entity === 'financials') {
       const item = state.financials.find((m) => m.id === id);
       if (!item) return;
+      const detailsText = JSON.stringify(item.details || [], null, 2);
       const fields = [
         toSelect('Tipo', 'type', item.type, [
           { value: 'income', label: 'Ingreso' },
@@ -640,14 +718,17 @@ const setupEditHandlers = () => {
         ]),
         toField('Monto', 'amount', item.amount, 'number', 'step="0.01"'),
         toField('Descripcion', 'description', item.description || ''),
+        toTextarea('Detalle (JSON)', 'details', detailsText),
       ];
       openModal('Editar movimiento', fields, async (data) => {
+        const details = parseJson(data.get('details'), []);
         await api(`/financials/${id}`, {
           method: 'PUT',
           body: JSON.stringify({
             type: data.get('type'),
             amount: Number(data.get('amount') || 0),
             description: data.get('description') || null,
+            details,
           }),
         });
         closeModal();

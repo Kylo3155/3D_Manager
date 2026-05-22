@@ -19,7 +19,7 @@ class Filament(SQLModel, table=True):
     name: str
     color: Optional[str] = None
     material: Optional[str] = None
-    stock_grams: int = 0
+    stock_grams: float = 0.0
     cost_per_kg: float = 0.0
     extruder_temp_c: Optional[int] = None
     bed_temp_c: Optional[int] = None
@@ -49,3 +49,4 @@ class FinancialMovement(SQLModel, table=True):
     type: str  # 'income' or 'expense'
     amount: float
     description: Optional[str] = None
+    details: list[dict] = Field(default_factory=list, sa_column=Column(JSON))

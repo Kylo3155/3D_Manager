@@ -74,6 +74,15 @@ body {
 .sidebar__footer {
   font-size: 0.85rem;
   color: var(--muted);
+  display: grid;
+  gap: 0.4rem;
+}
+
+.sidebar__copyright {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
 }
 
 .content {
@@ -183,6 +192,10 @@ body {
   display: grid;
   gap: 0.8rem;
   border: 1px dashed var(--border);
+}
+
+.finance-detail-block {
+  margin: 1rem 0;
 }
 
 .order-block__head {
@@ -415,6 +428,21 @@ select::placeholder {
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.35);
+}
+
+.finance-details {
+  grid-column: 1 / -1;
+  display: none;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 0.6rem 0.8rem;
+  color: var(--muted);
+  gap: 0.3rem;
+}
+
+.finance-details.is-open {
+  display: grid;
 }
 
 .hint {

@@ -10,7 +10,7 @@
     <div class="layout">
       <aside class="sidebar">
         <div class="sidebar__brand">
-          <span>3D Manager</span>
+          <span>3D Manager</span><br/>
           <small>Panel principal</small>
         </div>
         <nav class="sidebar__nav">
@@ -23,6 +23,7 @@
         </nav>
         <div class="sidebar__footer">
           <span>Administra todo tu flujo</span>
+          <small class="sidebar__copyright">Kylo - 2026</small>
         </div>
       </aside>
 
@@ -141,6 +142,13 @@
           <input name="description" placeholder="Descripcion" />
           <button class="btn" type="submit">Registrar</button>
         </form>
+        <div class="order-block finance-detail-block">
+          <div class="order-block__head">
+            <h3>Detalle</h3>
+            <button type="button" class="btn btn--ghost" id="add-finance-detail">Agregar item</button>
+          </div>
+          <div id="finance-details" class="order-rows"></div>
+        </div>
         <div class="finance-summary" id="finance-summary">
           <div>
             <span>Total invertido</span>

@@ -141,13 +141,13 @@ def create_order(order: Order):
         details = order.details or {}
         for item in details.get("filaments", []):
             fid = item.get("id")
-            grams = int(item.get("grams", 0))
+            grams = float(item.get("grams", 0))
             filament = session.get(Filament, fid)
             if not filament:
                 raise HTTPException(status_code=404, detail=f"Filament {fid} not found")
             if filament.stock_grams < grams:
                 raise HTTPException(status_code=400, detail=f"Not enough filament {filament.name}")
-            filament.stock_grams -= grams
+            filament.stock_grams = max(0.0, filament.stock_grams - grams)
             session.add(filament)
 
         for item in details.get("supplies", []):
@@ -194,10 +194,26 @@ def complete_order(order_id: int):
             raise HTTPException(status_code=404, detail="Order not found")
         if not order.completed:
             order.completed = True
+            model_items = [
+                {"name": model, "qty": 1}
+                for model in (order.models or [])
+                if isinstance(model, str) and model.strip()
+            ]
+            supply_items = []
+            details = order.details or {}
+            for item in details.get("supplies", []):
+                sid = item.get("id")
+                qty = int(item.get("qty", 0))
+                if not sid or qty <= 0:
+                    continue
+                supply = session.get(Supply, int(sid))
+                if supply:
+                    supply_items.append({"name": supply.name, "qty": qty})
             movement = FinancialMovement(
                 type="income",
                 amount=order.total_charge,
                 description=f"Pedido: {order.customer_name or 'Sin nombre'}",
+                details=[*model_items, *supply_items],
             )
             session.add(movement)
         session.add(order)
@@ -231,6 +247,7 @@ def update_financial(movement_id: int, data: FinancialMovement):
         movement.type = data.type
         movement.amount = data.amount
         movement.description = data.description
+        movement.details = data.details or []
         session.add(movement)
         session.commit()
         session.refresh(movement)
