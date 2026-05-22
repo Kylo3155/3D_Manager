@@ -307,7 +307,7 @@ const addSupplyRow = () => {
   const container = document.getElementById('order-supplies');
   if (!container) return;
   const row = document.createElement('div');
-  row.className = 'order-row';
+    `<span><span class="tag ${m.type === 'income' ? 'tag--income' : 'tag--expense'}">${m.type === 'income' ? 'Ingreso' : 'Egreso'}</span>${m.description || ''}</span><small class="list-actions"><span>$${formatNumber(m.amount || 0)}</span><button class="btn btn--ghost" data-edit="financials" data-id="${m.id}">Editar</button></small>`
   row.innerHTML = `
     <select name="supply_id">
       ${buildOptions(cachedSupplies, 'Insumo (seleccionar)')}

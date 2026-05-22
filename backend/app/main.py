@@ -192,7 +192,14 @@ def complete_order(order_id: int):
         order = session.get(Order, order_id)
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
-        order.completed = True
+        if not order.completed:
+            order.completed = True
+            movement = FinancialMovement(
+                type="income",
+                amount=order.total_charge,
+                description=f"Pedido: {order.customer_name or 'Sin nombre'}",
+            )
+            session.add(movement)
         session.add(order)
         session.commit()
         session.refresh(order)

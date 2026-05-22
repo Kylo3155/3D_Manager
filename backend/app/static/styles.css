@@ -393,6 +393,30 @@ select::placeholder {
   margin-right: auto;
 }
 
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 0.5rem;
+  border: 1px solid transparent;
+}
+
+.tag--income {
+  background: rgba(29, 191, 115, 0.15);
+  color: #1dbf73;
+  border-color: rgba(29, 191, 115, 0.35);
+}
+
+.tag--expense {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
 .hint {
   font-size: 0.9rem;
   color: var(--muted);
