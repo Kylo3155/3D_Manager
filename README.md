@@ -4,10 +4,18 @@ Sistema web para administrar un negocio de impresion 3D. Permite registrar impre
 
 ## Como usarlo
 
-1. Ejecuta el script de inicio:
+1. Ejecuta el script de inicio segun tu sistema:
+
+Linux/macOS:
 
 ```bash
 bash scripts/run_dev.sh
+```
+
+Windows (PowerShell):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run_dev.ps1
 ```
 
 2. Abre la pagina en tu navegador:
