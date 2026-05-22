@@ -42,6 +42,22 @@ def create_printer(printer: Printer):
         return printer
 
 
+@app.put("/printers/{printer_id}", response_model=Printer)
+def update_printer(printer_id: int, data: Printer):
+    with Session(engine) as session:
+        printer = session.get(Printer, printer_id)
+        if not printer:
+            raise HTTPException(status_code=404, detail="Printer not found")
+        printer.brand = data.brand
+        printer.model = data.model
+        printer.price = data.price
+        printer.purchase_date = data.purchase_date
+        session.add(printer)
+        session.commit()
+        session.refresh(printer)
+        return printer
+
+
 # Filament
 @app.get("/filaments", response_model=List[Filament])
 def list_filaments():
@@ -58,6 +74,25 @@ def create_filament(f: Filament):
         return f
 
 
+@app.put("/filaments/{filament_id}", response_model=Filament)
+def update_filament(filament_id: int, data: Filament):
+    with Session(engine) as session:
+        filament = session.get(Filament, filament_id)
+        if not filament:
+            raise HTTPException(status_code=404, detail="Filament not found")
+        filament.name = data.name
+        filament.color = data.color
+        filament.material = data.material
+        filament.stock_grams = data.stock_grams
+        filament.cost_per_kg = data.cost_per_kg
+        filament.extruder_temp_c = data.extruder_temp_c
+        filament.bed_temp_c = data.bed_temp_c
+        session.add(filament)
+        session.commit()
+        session.refresh(filament)
+        return filament
+
+
 # Supplies
 @app.get("/supplies", response_model=List[Supply])
 def list_supplies():
@@ -72,6 +107,21 @@ def create_supply(s: Supply):
         session.commit()
         session.refresh(s)
         return s
+
+
+@app.put("/supplies/{supply_id}", response_model=Supply)
+def update_supply(supply_id: int, data: Supply):
+    with Session(engine) as session:
+        supply = session.get(Supply, supply_id)
+        if not supply:
+            raise HTTPException(status_code=404, detail="Supply not found")
+        supply.name = data.name
+        supply.stock_qty = data.stock_qty
+        supply.unit_cost = data.unit_cost
+        session.add(supply)
+        session.commit()
+        session.refresh(supply)
+        return supply
 
 
 # Orders (consume stock)
@@ -117,6 +167,25 @@ def create_order(order: Order):
         return order
 
 
+@app.put("/orders/{order_id}", response_model=Order)
+def update_order(order_id: int, data: Order):
+    with Session(engine) as session:
+        order = session.get(Order, order_id)
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        order.customer_name = data.customer_name
+        order.created_date = data.created_date
+        order.due_date = data.due_date
+        order.details = data.details or {"filaments": [], "supplies": []}
+        order.models = data.models or []
+        order.total_charge = data.total_charge
+        order.completed = data.completed
+        session.add(order)
+        session.commit()
+        session.refresh(order)
+        return order
+
+
 @app.patch("/orders/{order_id}/complete", response_model=Order)
 def complete_order(order_id: int):
     with Session(engine) as session:
@@ -144,6 +213,21 @@ def create_financial(m: FinancialMovement):
         session.commit()
         session.refresh(m)
         return m
+
+
+@app.put("/financials/{movement_id}", response_model=FinancialMovement)
+def update_financial(movement_id: int, data: FinancialMovement):
+    with Session(engine) as session:
+        movement = session.get(FinancialMovement, movement_id)
+        if not movement:
+            raise HTTPException(status_code=404, detail="Financial movement not found")
+        movement.type = data.type
+        movement.amount = data.amount
+        movement.description = data.description
+        session.add(movement)
+        session.commit()
+        session.refresh(movement)
+        return movement
 
 
 # Budget calculator

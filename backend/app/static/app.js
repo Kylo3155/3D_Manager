@@ -31,23 +31,33 @@ const renderList = (el, items, formatter) => {
   });
 };
 
+const state = {
+  printers: [],
+  filaments: [],
+  supplies: [],
+  financials: [],
+  orders: [],
+};
+
 const refresh = async () => {
   const printers = await api('/printers');
+  state.printers = printers;
   renderList(listEl('printers'), printers, (p) => {
     const price = formatNumber(p.price || 0);
     const date = p.purchase_date || '-';
     return `
       <span>${p.brand} <small>${p.model}</small></span>
       <small>$${price}</small>
-      <small>${date}</small>
+      <small class="list-actions"><span>${date}</span><button class="btn btn--ghost" data-edit="printers" data-id="${p.id}">Editar</button></small>
     `;
   });
 
   const filaments = await api('/filaments');
+  state.filaments = filaments;
   renderList(listEl('filaments'), filaments, (f) =>
     `<span>${f.name} <small>${f.color || ''}</small></span>`
       + `<small>${formatInteger(f.stock_grams)} g | $${formatNumber(f.cost_per_kg || 0)}/kg</small>`
-      + `<small>${f.extruder_temp_c ?? '-'}C / ${f.bed_temp_c ?? '-'}C</small>`
+      + `<small class="list-actions"><span>${f.extruder_temp_c ?? '-'}C / ${f.bed_temp_c ?? '-'}C</span><button class="btn btn--ghost" data-edit="filaments" data-id="${f.id}">Editar</button></small>`
   );
   updateFilamentOptions(filaments);
 
@@ -56,22 +66,25 @@ const refresh = async () => {
   );
 
   const supplies = await api('/supplies');
+    state.supplies = supplies;
   renderList(listEl('supplies'), supplies, (s) =>
     `<span>${s.name}</span>
       <small>${formatInteger(s.stock_qty)} u</small>
-      <small>$${formatNumber(s.unit_cost || 0)}/u | Total: $${formatNumber(Number(s.unit_cost || 0) * Number(s.stock_qty || 0))}</small>`
+      <small class="list-actions"><span>$${formatNumber(s.unit_cost || 0)}/u | Total: $${formatNumber(Number(s.unit_cost || 0) * Number(s.stock_qty || 0))}</span><button class="btn btn--ghost" data-edit="supplies" data-id="${s.id}">Editar</button></small>`
   );
   updateSupplyOptions(supplies);
 
   const supplyMap = new Map(supplies.map((s) => [String(s.id), s.name]));
 
   const financials = await api('/financials');
+  state.financials = financials;
   renderList(listEl('financials'), financials, (m) =>
-    `<span>${m.type === 'income' ? 'Ingreso' : 'Egreso'}: ${m.description || ''}</span><small>$${m.amount}</small>`
+    `<span>${m.type === 'income' ? 'Ingreso' : 'Egreso'}: ${m.description || ''}</span><small class="list-actions"><span>$${formatNumber(m.amount || 0)}</span><button class="btn btn--ghost" data-edit="financials" data-id="${m.id}">Editar</button></small>`
   );
   updateFinanceSummary(financials);
 
   const orders = await api('/orders');
+  state.orders = orders;
   renderList(listEl('orders'), orders, (o) => {
     const created = o.created_date || '-';
     const due = o.due_date || '-';
@@ -88,10 +101,11 @@ const refresh = async () => {
       <small>${created} → ${due}</small>
       <small>${models}</small>
       <small>$${formatNumber(o.total_charge || 0)}</small>
-      <small>
+      <small class="list-actions">
         ${status}
         ${o.completed ? '' : `<button class="btn btn--ghost" data-complete="${o.id}">Completar</button>`}
         <button class="btn btn--ghost" data-toggle="${o.id}">Detalles</button>
+        <button class="btn btn--ghost" data-edit="orders" data-id="${o.id}">Editar</button>
       </small>
       <div class="order-details" data-details="${o.id}">
         <div><strong>Cliente:</strong> ${o.customer_name || '-'}</div>
@@ -350,3 +364,207 @@ navItems.forEach((item) => {
 
 setupOrderForm();
 refresh();
+
+const modal = document.getElementById('edit-modal');
+const editForm = document.getElementById('edit-form');
+const modalTitle = document.getElementById('modal-title');
+
+const closeModal = () => {
+  modal?.classList.remove('is-open');
+  modal?.setAttribute('aria-hidden', 'true');
+  if (editForm) editForm.innerHTML = '';
+};
+
+const openModal = (title, fields, onSubmit) => {
+  if (!modal || !editForm || !modalTitle) return;
+  modalTitle.textContent = title;
+  editForm.innerHTML = fields.join('');
+  modal.classList.add('is-open');
+  modal.setAttribute('aria-hidden', 'false');
+
+  const handler = async (e) => {
+    e.preventDefault();
+    await onSubmit(new FormData(editForm));
+    editForm.removeEventListener('submit', handler);
+  };
+  editForm.addEventListener('submit', handler);
+};
+
+modal?.addEventListener('click', (e) => {
+  if (e.target instanceof HTMLElement && e.target.hasAttribute('data-close')) {
+    closeModal();
+  }
+});
+
+const toField = (label, name, value, type = 'text', extra = '') =>
+  `<div class="field"><label>${label}</label><input name="${name}" type="${type}" value="${value ?? ''}" ${extra}></div>`;
+
+const toTextarea = (label, name, value) =>
+  `<div class="field"><label>${label}</label><textarea name="${name}" rows="4">${value ?? ''}</textarea></div>`;
+
+const toSelect = (label, name, value, options) => {
+  const opts = options
+    .map((opt) => `<option value="${opt.value}" ${opt.value === value ? 'selected' : ''}>${opt.label}</option>`)
+    .join('');
+  return `<div class="field"><label>${label}</label><select name="${name}">${opts}</select></div>`;
+};
+
+const toCheckbox = (label, name, checked) =>
+  `<div class="field"><label>${label}</label><input name="${name}" type="checkbox" ${checked ? 'checked' : ''}></div>`;
+
+const parseJson = (value, fallback) => {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const setupEditHandlers = () => {
+  document.body.addEventListener('click', (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (!target.dataset.edit || !target.dataset.id) return;
+
+    const entity = target.dataset.edit;
+    const id = Number(target.dataset.id);
+
+    if (entity === 'printers') {
+      const item = state.printers.find((p) => p.id === id);
+      if (!item) return;
+      const fields = [
+        toField('Marca', 'brand', item.brand),
+        toField('Modelo', 'model', item.model),
+        toField('Precio', 'price', item.price, 'number', 'step="0.01"'),
+        toField('Fecha de compra', 'purchase_date', item.purchase_date || '', 'date'),
+      ];
+      openModal('Editar impresora', fields, async (data) => {
+        await api(`/printers/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            brand: data.get('brand'),
+            model: data.get('model'),
+            price: Number(data.get('price') || 0),
+            purchase_date: data.get('purchase_date') || null,
+          }),
+        });
+        closeModal();
+        await refresh();
+      });
+    }
+
+    if (entity === 'filaments') {
+      const item = state.filaments.find((f) => f.id === id);
+      if (!item) return;
+      const fields = [
+        toField('Nombre', 'name', item.name),
+        toField('Color', 'color', item.color || ''),
+        toField('Material', 'material', item.material || ''),
+        toField('Stock (g)', 'stock_grams', item.stock_grams, 'number'),
+        toField('Costo por kg', 'cost_per_kg', item.cost_per_kg, 'number', 'step="0.01"'),
+        toField('Temp. extrusor (C)', 'extruder_temp_c', item.extruder_temp_c ?? '', 'number'),
+        toField('Temp. cama (C)', 'bed_temp_c', item.bed_temp_c ?? '', 'number'),
+      ];
+      openModal('Editar filamento', fields, async (data) => {
+        await api(`/filaments/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            name: data.get('name'),
+            color: data.get('color') || null,
+            material: data.get('material') || null,
+            stock_grams: Number(data.get('stock_grams') || 0),
+            cost_per_kg: Number(data.get('cost_per_kg') || 0),
+            extruder_temp_c: data.get('extruder_temp_c') ? Number(data.get('extruder_temp_c')) : null,
+            bed_temp_c: data.get('bed_temp_c') ? Number(data.get('bed_temp_c')) : null,
+          }),
+        });
+        closeModal();
+        await refresh();
+      });
+    }
+
+    if (entity === 'supplies') {
+      const item = state.supplies.find((s) => s.id === id);
+      if (!item) return;
+      const fields = [
+        toField('Nombre', 'name', item.name),
+        toField('Stock', 'stock_qty', item.stock_qty, 'number'),
+        toField('Costo unitario', 'unit_cost', item.unit_cost, 'number', 'step="0.01"'),
+      ];
+      openModal('Editar insumo', fields, async (data) => {
+        await api(`/supplies/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            name: data.get('name'),
+            stock_qty: Number(data.get('stock_qty') || 0),
+            unit_cost: Number(data.get('unit_cost') || 0),
+          }),
+        });
+        closeModal();
+        await refresh();
+      });
+    }
+
+    if (entity === 'financials') {
+      const item = state.financials.find((m) => m.id === id);
+      if (!item) return;
+      const fields = [
+        toSelect('Tipo', 'type', item.type, [
+          { value: 'income', label: 'Ingreso' },
+          { value: 'expense', label: 'Egreso' },
+        ]),
+        toField('Monto', 'amount', item.amount, 'number', 'step="0.01"'),
+        toField('Descripcion', 'description', item.description || ''),
+      ];
+      openModal('Editar movimiento', fields, async (data) => {
+        await api(`/financials/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            type: data.get('type'),
+            amount: Number(data.get('amount') || 0),
+            description: data.get('description') || null,
+          }),
+        });
+        closeModal();
+        await refresh();
+      });
+    }
+
+    if (entity === 'orders') {
+      const item = state.orders.find((o) => o.id === id);
+      if (!item) return;
+      const detailsText = JSON.stringify(item.details || { filaments: [], supplies: [] }, null, 2);
+      const modelsText = JSON.stringify(item.models || [], null, 2);
+      const fields = [
+        toField('Cliente', 'customer_name', item.customer_name || ''),
+        toField('Fecha creacion', 'created_date', item.created_date || '', 'date'),
+        toField('Fecha entrega', 'due_date', item.due_date || '', 'date'),
+        toField('Cobro total', 'total_charge', item.total_charge, 'number', 'step="0.01"'),
+        toCheckbox('Completado', 'completed', item.completed),
+        toTextarea('Modelos (JSON)', 'models', modelsText),
+        toTextarea('Detalles (JSON)', 'details', detailsText),
+      ];
+      openModal('Editar pedido', fields, async (data) => {
+        const models = parseJson(data.get('models'), []);
+        const details = parseJson(data.get('details'), { filaments: [], supplies: [] });
+        await api(`/orders/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            customer_name: data.get('customer_name') || '',
+            created_date: data.get('created_date') || null,
+            due_date: data.get('due_date') || null,
+            total_charge: Number(data.get('total_charge') || 0),
+            completed: data.get('completed') === 'on',
+            models,
+            details,
+          }),
+        });
+        closeModal();
+        await refresh();
+      });
+    }
+  });
+};
+
+setupEditHandlers();

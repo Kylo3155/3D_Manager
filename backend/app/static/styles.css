@@ -96,6 +96,61 @@ body {
   font-size: 1.8rem;
 }
 
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal.is-open {
+  display: flex;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 6, 10, 0.7);
+}
+
+.modal__panel {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1.5rem;
+  width: min(760px, 92vw);
+  max-height: 85vh;
+  overflow: auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.form .field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.form label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 
 .card {
   background: var(--card);
@@ -254,6 +309,10 @@ select::placeholder {
   grid-template-columns: 2fr 1fr 2fr;
 }
 
+#financials .list-item {
+  grid-template-columns: 2fr 1fr;
+}
+
 #orders .list-item {
   grid-template-columns: 1.5fr 1.5fr 2fr 1fr 1.2fr;
 }
@@ -279,6 +338,18 @@ select::placeholder {
 
 .list-item small {
   color: var(--muted);
+}
+
+.list-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.list-actions span {
+  margin-right: auto;
 }
 
 .hint {

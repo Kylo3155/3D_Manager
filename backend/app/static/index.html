@@ -187,6 +187,20 @@
       </main>
     </div>
 
+    <div class="modal" id="edit-modal" aria-hidden="true">
+      <div class="modal__backdrop" data-close></div>
+      <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal__header">
+          <h3 id="modal-title">Editar</h3>
+          <button class="btn btn--ghost" type="button" data-close>Cerrar</button>
+        </div>
+        <form id="edit-form" class="form form--wide"></form>
+        <div class="modal__actions">
+          <button class="btn" type="submit" form="edit-form">Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+
     <script src="/static/app.js"></script>
   </body>
 </html>

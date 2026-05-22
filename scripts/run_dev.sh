@@ -20,6 +20,14 @@ if [ -f "backend/.env" ]; then
   set +a
 fi
 
+run_docker() {
+  if docker info >/dev/null 2>&1; then
+    docker "$@"
+  else
+    sudo docker "$@"
+  fi
+}
+
 if command -v docker >/dev/null 2>&1; then
   if ! docker info >/dev/null 2>&1; then
     if command -v systemctl >/dev/null 2>&1; then
@@ -36,9 +44,9 @@ if command -v docker >/dev/null 2>&1; then
     fi
   fi
 
-  if docker info >/dev/null 2>&1; then
-    if ! docker ps -a --format '{{.Names}}' | grep -q '^threed_db$'; then
-      docker run -d --name threed_db \
+  if docker info >/dev/null 2>&1 || sudo docker info >/dev/null 2>&1; then
+    if ! run_docker ps -a --format '{{.Names}}' | grep -q '^threed_db$'; then
+      run_docker run -d --name threed_db \
         -e POSTGRES_USER=postgres \
         -e POSTGRES_PASSWORD=postgres \
         -e POSTGRES_DB=threed_manager \
@@ -46,7 +54,7 @@ if command -v docker >/dev/null 2>&1; then
         -v threed_db_data:/var/lib/postgresql/data \
         postgres:15
     else
-      docker start threed_db >/dev/null
+      run_docker start threed_db >/dev/null
     fi
   else
     echo "Docker daemon not running; start it to use Postgres." 1>&2
