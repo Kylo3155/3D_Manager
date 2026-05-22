@@ -281,6 +281,47 @@ select::placeholder {
   font-size: 1.2rem;
 }
 
+.finance-chart {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.finance-chart__label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.finance-chart__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.finance-chart__header select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  padding: 0.4rem 0.6rem;
+  border-radius: 10px;
+}
+
+.finance-chart__canvas {
+  background: #0c0f15;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 0.5rem;
+}
+
+
 .list-header {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;

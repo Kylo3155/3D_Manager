@@ -135,6 +135,123 @@ const updateFinanceSummary = (financials) => {
     values[1].textContent = `$${formatNumber(totalIncome)}`;
     values[2].textContent = `$${formatNumber(profit)}`;
   }
+
+  renderFinanceChart(financials);
+};
+
+const getWeekStart = (date) => {
+  const d = new Date(date);
+  const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const formatKey = (date, mode) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  if (mode === 'day') return `${year}-${month}-${day}`;
+  if (mode === 'month') return `${year}-${month}`;
+  if (mode === 'year') return `${year}`;
+  const start = getWeekStart(date);
+  const startMonth = String(start.getMonth() + 1).padStart(2, '0');
+  const startDay = String(start.getDate()).padStart(2, '0');
+  return `${start.getFullYear()}-W${startMonth}${startDay}`;
+};
+
+const labelFromKey = (key, mode) => {
+  if (mode === 'day') return key.slice(5);
+  if (mode === 'month') return key;
+  if (mode === 'year') return key;
+  return key.replace('-W', ' W ');
+};
+
+const buildBuckets = (mode) => {
+  const now = new Date();
+  const buckets = [];
+  const count = mode === 'day' ? 14 : mode === 'week' ? 12 : mode === 'month' ? 12 : 5;
+  const cursor = new Date(now);
+  for (let i = 0; i < count; i += 1) {
+    const current = new Date(cursor);
+    buckets.unshift({ key: formatKey(current, mode), label: labelFromKey(formatKey(current, mode), mode) });
+    if (mode === 'day') cursor.setDate(cursor.getDate() - 1);
+    if (mode === 'week') cursor.setDate(cursor.getDate() - 7);
+    if (mode === 'month') cursor.setMonth(cursor.getMonth() - 1);
+    if (mode === 'year') cursor.setFullYear(cursor.getFullYear() - 1);
+  }
+  return buckets;
+};
+
+const renderFinanceChart = (financials) => {
+  const container = document.getElementById('finance-chart');
+  const range = document.getElementById('finance-range');
+  if (!container || !range) return;
+  const mode = range.value;
+  const buckets = buildBuckets(mode);
+  const data = new Map(buckets.map((b) => [b.key, 0]));
+
+  financials.forEach((m) => {
+    const dateStr = m.created_at || m.created_date;
+    if (!dateStr) return;
+    const date = new Date(dateStr);
+    const key = formatKey(date, mode);
+    if (!data.has(key)) return;
+    const delta = m.type === 'income' ? Number(m.amount || 0) : -Number(m.amount || 0);
+    data.set(key, (data.get(key) || 0) + delta);
+  });
+
+  const values = buckets.map((b) => data.get(b.key) || 0);
+  const maxAbs = Math.max(1, ...values.map((v) => Math.abs(v)));
+  const width = 640;
+  const height = 220;
+  const padding = 32;
+  const chartHeight = height - padding * 2;
+  const mid = padding + chartHeight / 2;
+  const step = (width - padding * 2) / Math.max(values.length - 1, 1);
+
+  let points = '';
+  let segments = '';
+  let labels = '';
+  const coords = values.map((value, index) => {
+    const x = padding + index * step;
+    const y = mid - (value / maxAbs) * (chartHeight / 2);
+    return { x, y, value };
+  });
+
+  coords.forEach((point, index) => {
+    points += `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y} `;
+    const fill = point.value >= 0 ? '#1dbf73' : '#ef4444';
+    segments += `<circle cx="${point.x}" cy="${point.y}" r="3.5" fill="${fill}" />`;
+    labels += `<text x="${point.x}" y="${height - 6}" fill="#9aa0a6" font-size="10" text-anchor="middle">${buckets[index].label}</text>`;
+  });
+
+  const axisValues = [maxAbs, maxAbs / 2, 0, -maxAbs / 2, -maxAbs];
+  const axisLabels = axisValues
+    .map((val) => {
+      const y = mid - (val / maxAbs) * (chartHeight / 2);
+      return `<text x="${padding - 8}" y="${y + 4}" fill="#9aa0a6" font-size="10" text-anchor="end">$${formatNumber(val)}</text>`;
+    })
+    .join('');
+
+  const axisLines = axisValues
+    .map((val) => {
+      const y = mid - (val / maxAbs) * (chartHeight / 2);
+      return `<line x1="${padding}" y1="${y}" x2="${width - padding}" y2="${y}" stroke="#1f232b" stroke-width="1" />`;
+    })
+    .join('');
+
+  const svg = `
+    <svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" role="img" aria-label="Ganancia por periodo" data-width="${width}">
+      ${axisLines}
+      ${axisLabels}
+      <path d="${points}" fill="none" stroke="#9aa0a6" stroke-width="2" />
+      ${segments}
+      ${labels}
+    </svg>
+  `;
+
+  container.innerHTML = svg;
 };
 
 let cachedFilaments = [];
@@ -364,6 +481,13 @@ navItems.forEach((item) => {
 
 setupOrderForm();
 refresh();
+
+const financeRange = document.getElementById('finance-range');
+if (financeRange) {
+  financeRange.addEventListener('change', () => {
+    renderFinanceChart(state.financials);
+  });
+}
 
 const modal = document.getElementById('edit-modal');
 const editForm = document.getElementById('edit-form');
